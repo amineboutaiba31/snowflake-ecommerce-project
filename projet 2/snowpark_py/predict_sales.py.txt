@@ -1,0 +1,52 @@
+#  Packages requis
+packages = ["pandas", "scikit-learn"]
+
+#  Fonction principale obligatoire (handler)
+def main(session):
+    from sklearn.ensemble import RandomForestRegressor
+    import pandas as pd
+
+    # 1️⃣ Agréger les ventes par produit et région (état client)
+    df = session.sql("""
+        SELECT
+            p.product_category_name AS PRODUCT_CATEGORY_NAME,
+            c.customer_state AS CUSTOMER_STATE,
+            SUM(oi.price) AS TOTAL_SALES
+        FROM analytics.order_items_clean oi
+        JOIN analytics.orders_clean o ON oi.order_id = o.order_id
+        JOIN analytics.products_clean p ON oi.product_id = p.product_id
+        JOIN analytics.customers_clean c ON o.customer_id = c.customer_id
+        GROUP BY 1, 2
+    """)
+
+    # 2️ Convertir en pandas DataFrame
+    pdf = df.to_pandas()
+
+    #  Afficher les colonnes disponibles (debug)
+    print("Colonnes disponibles :", pdf.columns)
+
+    # 3️ Encodage des colonnes catégorielles
+    pdf["product_code"] = pdf["PRODUCT_CATEGORY_NAME"].astype("category").cat.codes
+    pdf["region_code"] = pdf["CUSTOMER_STATE"].astype("category").cat.codes
+
+    #  Définir X (features) et y (cible)
+    X = pdf[["product_code", "region_code"]]
+    y = pdf["TOTAL_SALES"]
+
+    # 5️Entraînement du modèle Random Forest
+    model = RandomForestRegressor(n_estimators=100, random_state=42)
+    model.fit(X, y)
+
+    # 6️ Ajouter les prédictions
+    pdf["PREDICTED_SALES"] = model.predict(X)
+
+    # 7️ Retour à Snowpark DataFrame
+    result_df = session.create_dataframe(
+        pdf[["PRODUCT_CATEGORY_NAME", "CUSTOMER_STATE", "PREDICTED_SALES"]]
+    )
+
+    # 8️Sauvegarder dans Snowflake
+    result_df.write.mode("overwrite").save_as_table("ml.predicted_sales")
+
+    # 9️ Afficher un aperçu
+    return result_df.limit(10)

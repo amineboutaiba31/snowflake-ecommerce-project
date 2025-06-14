@@ -1,0 +1,30 @@
+from snowflake.snowpark.functions import col
+from snowflake.snowpark import Session
+from snowflake.snowpark.types import StringType, StructType, StructField
+from snowflake.snowpark import Row
+
+# Fonction de nettoyage générique
+def nettoyer_et_sauvegarder(session: Session, nom_table_source: str, nom_table_cible: str) -> str:
+    df_raw = session.table(nom_table_source)
+    df_clean = df_raw.drop_duplicates().dropna()
+    renamed_cols = {c: c.lower().replace(" ", "_") for c in df_clean.schema.names}
+    df_final = df_clean.select([col(c).alias(renamed_cols[c]) for c in df_clean.schema.names])
+    df_final.write.mode("overwrite").save_as_table(nom_table_cible)
+    return f"✅ Nettoyée : {nom_table_cible}"
+
+# Point d’entrée requis par Snowflake
+
+def main(session: Session):
+    messages = []
+
+    messages.append(nettoyer_et_sauvegarder(session, "RAW.ORDERS_RAW", "ANALYTICS.ORDERS_CLEAN"))
+    messages.append(nettoyer_et_sauvegarder(session, "RAW.ORDER_ITEMS_RAW", "ANALYTICS.ORDER_ITEMS_CLEAN"))
+    messages.append(nettoyer_et_sauvegarder(session, "RAW.CUSTOMERS_RAW", "ANALYTICS.CUSTOMERS_CLEAN"))
+    messages.append(nettoyer_et_sauvegarder(session, "RAW.PRODUCTS_RAW", "ANALYTICS.PRODUCTS_CLEAN"))
+    messages.append(nettoyer_et_sauvegarder(session, "RAW.REVIEWS_RAW", "ANALYTICS.REVIEWS_CLEAN"))
+    messages.append(nettoyer_et_sauvegarder(session, "RAW.PAYMENTS_RAW", "ANALYTICS.PAYMENTS_CLEAN"))
+    messages.append(nettoyer_et_sauvegarder(session, "RAW.SELLERS_RAW", "ANALYTICS.SELLERS_CLEAN"))
+    messages.append(nettoyer_et_sauvegarder(session, "RAW.GEOLOCATION_RAW", "ANALYTICS.GEOLOCATION_CLEAN"))
+
+    # Convertir les messages en DataFrame Snowpark
+    return session.create_dataframe([Row(message=m) for m in messages])
