@@ -1,0 +1,7 @@
+
+--Créer un STAGE (dossier temporaire dans Snowflake)
+CREATE OR REPLACE STAGE brazil_stage
+COMMENT = 'Stage pour les fichiers du dataset Olist';
+
+--Vérifie que les fichiers sont bien dans le STAGE
+LIST @brazil_stage;

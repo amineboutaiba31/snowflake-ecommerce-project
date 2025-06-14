@@ -1,0 +1,13 @@
+CREATE OR REPLACE DATABASE brazil_ecommerce;
+
+-- Schéma pour les fichiers bruts (CSV)
+CREATE OR REPLACE SCHEMA brazil_ecommerce.raw;
+
+-- Schéma pour les données nettoyées
+CREATE OR REPLACE SCHEMA brazil_ecommerce.analytics;
+
+-- Schéma pour les données utilisées ou produites par les modèles prédictifs
+CREATE OR REPLACE SCHEMA brazil_ecommerce.ml;
+
+-- Schéma pour dashboards/ML
+CREATE OR REPLACE SCHEMA brazil_ecommerce.reporting;
